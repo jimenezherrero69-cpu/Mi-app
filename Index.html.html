@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="theme-color" content="#14140F" />
+<title>FORJA — Nutrición + Entreno</title>
+<link rel="icon" href="data:," />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.383.0?deps=react@18.2.0"
+  }
+}
+</script>
+<style>
+  html, body { margin: 0; padding: 0; background: #14140F; min-height: 100%; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module" data-presets="react">
+import React from "react";
+import ReactDOM from "react-dom/client";
+import * as LucideReact from "lucide-react";
+
+const { useState, useEffect, useCallback, useMemo } = React;
+const {
+  Dumbbell, Utensils, TrendingUp, User, Play, Check, Flame,
+  ChevronDown, RotateCcw, Heart, HeartOff,
+  Scale, Target, Sparkles, Salad, Beef, Wheat, Droplet, CalendarDays, Clock,
+} = LucideReact;
+
+/* ============================================================
+   PALETA (todo se aplica vía style inline: las clases Tailwind
+   con valores arbitrarios entre corchetes no se compilan aquí)
+============================================================ */
+const C = {
+  bg: "#14140F",
+  glow: "#2A2410",
+  surfaceTop: "#202117",
+  surfaceBot: "#1A1B13",
+  line: "#33341f",
+  lineSoft: "#2A2C1D",
+  cream: "#F2EFE6",
+  muted: "#9C9A88",
+  mutedDark: "#8B8977",
+  gold: "#D9A441",
+  goldLight: "#E7B85B",
+  goldDark: "#C88E2E",
+  rust: "#C1502E",
+  rustLight: "#D9683F",
+  rustDark: "#A6431F",
+  moss: "#7C8F4E",
+  mossLight: "#96AA5F",
+  mossDark: "#6C7D3F",
+  blue: "#7A93A8",
+  navInactive: "#6E6C5C",
+  navBg: "#181910",
+  input: "#181910",
+};
+
+const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');`;
+const F_DISPLAY = { fontFamily: "'Anton', sans-serif" };
+const F_HEAD = { fontFamily: "'Oswald', sans-serif" };
+
+/* ---------------- DATA: EJERCICIOS ---------------- */
+const EXERCISES = {
+  Pecho: [
+    { id: "e1", name: "Press banca con barra", series: 4, reps: "8-10", desc: "Espalda apoyada, escápulas retraídas, baja la barra al pecho controlada." },
+    { id: "e2", name: "Press inclinado con mancuernas", series: 3, reps: "10-12", desc: "Banco a 30-45º, empuja hacia arriba y adentro sin bloquear codo." },
+    { id: "e3", name: "Aperturas en polea", series: 3, reps: "12-15", desc: "Codo semiflexionado fijo, junta las manos delante del pecho." },
+    { id: "e4", name: "Fondos en paralelas", series: 3, reps: "8-12", desc: "Inclina el torso adelante para enfatizar pecho, baja hasta 90º de codo." },
+  ],
+  Espalda: [
+    { id: "e5", name: "Dominadas", series: 4, reps: "6-10", desc: "Agarre prono, tira desde los codos, pecho hacia la barra." },
+    { id: "e6", name: "Remo con barra", series: 4, reps: "8-10", desc: "Espalda recta 45º, tira hacia el ombligo, aprieta escápulas." },
+    { id: "e7", name: "Jalón al pecho", series: 3, reps: "10-12", desc: "Agarre ancho, lleva la barra a la parte alta del pecho." },
+    { id: "e8", name: "Remo en polea baja", series: 3, reps: "10-12", desc: "Espalda neutra, tira hacia el abdomen, pausa 1 segundo." },
+  ],
+  Piernas: [
+    { id: "e9", name: "Sentadilla con barra", series: 4, reps: "6-10", desc: "Pies a la anchura de hombros, rodillas alineadas con los pies, baja a paralelo." },
+    { id: "e10", name: "Peso muerto rumano", series: 4, reps: "8-10", desc: "Piernas semiflexionadas, cadera atrás, espalda recta todo el recorrido." },
+    { id: "e11", name: "Prensa de piernas", series: 3, reps: "10-12", desc: "Pies a la anchura de hombros en la plataforma, no bloquees rodillas arriba." },
+    { id: "e12", name: "Zancadas caminando", series: 3, reps: "12 c/pierna", desc: "Paso amplio, rodilla trasera casi al suelo, tronco erguido." },
+  ],
+  Hombros: [
+    { id: "e13", name: "Press militar de pie", series: 4, reps: "6-10", desc: "Core apretado, empuja la barra en línea recta sobre la cabeza." },
+    { id: "e14", name: "Elevaciones laterales", series: 3, reps: "12-15", desc: "Codos ligeramente flexionados, sube hasta la altura del hombro." },
+    { id: "e15", name: "Pájaros (deltoide posterior)", series: 3, reps: "12-15", desc: "Inclinado adelante, sube los brazos abriendo hacia los lados." },
+  ],
+  Brazos: [
+    { id: "e16", name: "Curl con barra", series: 3, reps: "10-12", desc: "Codos pegados al torso, sube sin balancear la espalda." },
+    { id: "e17", name: "Curl martillo", series: 3, reps: "10-12", desc: "Agarre neutro, trabaja bíceps y antebrazo." },
+    { id: "e18", name: "Press francés", series: 3, reps: "10-12", desc: "Tumbado, baja la barra hacia la frente flexionando solo el codo." },
+    { id: "e19", name: "Extensión de tríceps en polea", series: 3, reps: "12-15", desc: "Codos fijos junto al cuerpo, extiende completamente." },
+  ],
+  Core: [
+    { id: "e20", name: "Plancha", series: 3, reps: "30-45 seg", desc: "Cuerpo alineado de cabeza a talones, abdomen contraído." },
+    { id: "e21", name: "Rueda abdominal", series: 3, reps: "8-12", desc: "Extiende sin arquear la zona lumbar, vuelve controlado." },
+    { id: "e22", name: "Elevación de piernas colgado", series: 3, reps: "10-15", desc: "Cuelga de la barra, sube las piernas sin balanceo." },
+    { id: "e23", name: "Russian twist", series: 3, reps: "16 c/lado", desc: "Torso inclinado atrás, gira rotando desde el core, no los brazos." },
+  ],
+};
+
+const ytLink = (name) => `https://www.youtube.com/results?search_query=${encodeURIComponent(name + " técnica ejecución")}`;
+
+const MUSCLE_GROUPS = Object.keys(EXERCISES); // Pecho, Espalda, Piernas, Hombros, Brazos, Core
+
+const DEFAULT_SCHEDULE = {
+  Lunes: "Pecho", Martes: "Espalda", Miércoles: null, Jueves: "Piernas",
+  Viernes: "Hombros", Sábado: null, Domingo: null,
+};
+
+/* ---------------- DATA: ALIMENTOS ---------------- */
+const FOODS = [
+  { id: "f1", name: "Pechuga de pollo", cat: "Proteína", kcal: 165, p: 31, c: 0, g: 4, meals: ["comida", "cena"] },
+  { id: "f2", name: "Huevos", cat: "Proteína", kcal: 155, p: 13, c: 1, g: 11, meals: ["desayuno"] },
+  { id: "f3", name: "Salmón", cat: "Proteína", kcal: 208, p: 20, c: 0, g: 13, meals: ["comida", "cena"] },
+  { id: "f4", name: "Atún al natural", cat: "Proteína", kcal: 116, p: 26, c: 0, g: 1, meals: ["comida", "snack"] },
+  { id: "f5", name: "Pavo fileteado", cat: "Proteína", kcal: 135, p: 24, c: 0, g: 4, meals: ["comida", "cena"] },
+  { id: "f6", name: "Ternera magra", cat: "Proteína", kcal: 187, p: 26, c: 0, g: 8, meals: ["comida", "cena"] },
+  { id: "f7", name: "Yogur griego", cat: "Proteína", kcal: 97, p: 9, c: 4, g: 5, meals: ["desayuno", "snack"] },
+  { id: "f8", name: "Tofu", cat: "Proteína", kcal: 76, p: 8, c: 2, g: 4, meals: ["comida", "cena"] },
+  { id: "f9", name: "Arroz blanco", cat: "Carbohidrato", kcal: 130, p: 3, c: 28, g: 0, meals: ["comida", "cena"] },
+  { id: "f10", name: "Patata cocida", cat: "Carbohidrato", kcal: 87, p: 2, c: 20, g: 0, meals: ["comida", "cena"] },
+  { id: "f11", name: "Avena", cat: "Carbohidrato", kcal: 389, p: 17, c: 66, g: 7, meals: ["desayuno"] },
+  { id: "f12", name: "Pan integral", cat: "Carbohidrato", kcal: 247, p: 13, c: 41, g: 4, meals: ["desayuno", "snack"] },
+  { id: "f13", name: "Pasta integral", cat: "Carbohidrato", kcal: 124, p: 5, c: 25, g: 1, meals: ["comida", "cena"] },
+  { id: "f14", name: "Quinoa", cat: "Carbohidrato", kcal: 120, p: 4, c: 21, g: 2, meals: ["comida", "cena"] },
+  { id: "f15", name: "Plátano", cat: "Fruta", kcal: 89, p: 1, c: 23, g: 0, meals: ["desayuno", "snack"] },
+  { id: "f16", name: "Manzana", cat: "Fruta", kcal: 52, p: 0, c: 14, g: 0, meals: ["snack"] },
+  { id: "f17", name: "Brócoli", cat: "Verdura", kcal: 34, p: 3, c: 7, g: 0, meals: ["comida", "cena"] },
+  { id: "f18", name: "Espinacas", cat: "Verdura", kcal: 23, p: 3, c: 4, g: 0, meals: ["comida", "cena"] },
+  { id: "f19", name: "Ensalada mixta", cat: "Verdura", kcal: 20, p: 1, c: 4, g: 0, meals: ["comida", "cena"] },
+  { id: "f20", name: "Pimiento", cat: "Verdura", kcal: 31, p: 1, c: 6, g: 0, meals: ["comida", "cena"] },
+  { id: "f21", name: "Aguacate", cat: "Grasa", kcal: 160, p: 2, c: 9, g: 15, meals: ["desayuno", "comida"] },
+  { id: "f22", name: "Aceite de oliva", cat: "Grasa", kcal: 884, p: 0, c: 0, g: 100, meals: ["comida", "cena"] },
+  { id: "f23", name: "Frutos secos (mix)", cat: "Grasa", kcal: 607, p: 20, c: 21, g: 54, meals: ["snack"] },
+  { id: "f24", name: "Crema de cacahuete", cat: "Grasa", kcal: 588, p: 25, c: 20, g: 50, meals: ["desayuno", "snack"] },
+  { id: "f25", name: "Queso fresco batido", cat: "Proteína", kcal: 80, p: 12, c: 4, g: 2, meals: ["desayuno", "snack"] },
+  { id: "f26", name: "Garbanzos", cat: "Carbohidrato", kcal: 164, p: 9, c: 27, g: 3, meals: ["comida", "cena"] },
+  { id: "f27", name: "Lentejas", cat: "Carbohidrato", kcal: 116, p: 9, c: 20, g: 0, meals: ["comida", "cena"] },
+  { id: "f28", name: "Batata / boniato", cat: "Carbohidrato", kcal: 86, p: 2, c: 20, g: 0, meals: ["comida", "cena"] },
+];
+
+const MEALS = ["desayuno", "comida", "cena", "snack"];
+const MEAL_LABEL = { desayuno: "Desayuno", comida: "Comida", cena: "Cena", snack: "Snack" };
+const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+/* ---------------- DATA: RECETAS ---------------- */
+// foodIds: ingredientes clave, se usan para filtrar por "me gusta / no como"
+const RECIPES = [
+  { id: "r1", name: "Tortitas de avena, huevo y plátano", meal: "desayuno", kcal: 430, p: 24, c: 52, g: 13, foodIds: ["f11", "f2", "f15"],
+    ingredients: ["60g de avena", "2 huevos", "1 plátano maduro", "Canela al gusto", "Unas gotas de aceite para la sartén"],
+    steps: ["Tritura la avena, los huevos y el plátano juntos hasta lograr una masa fina.", "Calienta una sartén antiadherente a fuego medio con un poco de aceite.", "Vierte porciones pequeñas y cocina 2 minutos por lado hasta dorar.", "Espolvorea canela y sirve."] },
+  { id: "r2", name: "Huevos revueltos con aguacate y pan integral", meal: "desayuno", kcal: 460, p: 26, c: 30, g: 24, foodIds: ["f2", "f21", "f12"],
+    ingredients: ["3 huevos", "1/2 aguacate", "2 rebanadas de pan integral", "Sal, pimienta y un chorrito de aceite de oliva"],
+    steps: ["Bate los huevos con sal y pimienta.", "Cocínalos a fuego bajo removiendo sin parar hasta que cuajen cremosos.", "Tuesta el pan y machaca el aguacate encima.", "Sirve los huevos sobre el pan con aguacate."] },
+  { id: "r3", name: "Bowl de yogur griego, avena y frutos secos", meal: "desayuno", kcal: 410, p: 27, c: 38, g: 16, foodIds: ["f7", "f11", "f23"],
+    ingredients: ["200g de yogur griego", "40g de avena", "20g de frutos secos", "1 manzana troceada"],
+    steps: ["Mezcla el yogur con la avena y deja reposar 5 minutos.", "Trocea la manzana y añádela.", "Corona con los frutos secos justo antes de comer."] },
+  { id: "r4", name: "Tostada de crema de cacahuete y plátano", meal: "desayuno", kcal: 440, p: 18, c: 48, g: 20, foodIds: ["f24", "f15", "f12"],
+    ingredients: ["2 rebanadas de pan integral", "2 cucharadas de crema de cacahuete", "1 plátano en rodajas"],
+    steps: ["Tuesta el pan.", "Unta la crema de cacahuete todavía caliente.", "Cubre con las rodajas de plátano."] },
+  { id: "r5", name: "Queso fresco batido con avena y manzana", meal: "desayuno", kcal: 380, p: 22, c: 44, g: 9, foodIds: ["f25", "f11", "f16"],
+    ingredients: ["200g de queso fresco batido", "40g de avena", "1 manzana troceada", "Canela"],
+    steps: ["Mezcla el queso fresco batido con la avena.", "Añade la manzana troceada y canela al gusto.", "Deja reposar 5 minutos para que la avena se ablande."] },
+
+  { id: "r6", name: "Pollo a la plancha con arroz y brócoli", meal: "comida", kcal: 560, p: 46, c: 55, g: 12, foodIds: ["f1", "f9", "f17"],
+    ingredients: ["180g de pechuga de pollo", "80g de arroz (peso en crudo)", "150g de brócoli", "Ajo, sal y aceite de oliva"],
+    steps: ["Cuece el arroz según el paquete.", "Filetea el pollo, salpimienta y cocina 4-5 min por lado con un diente de ajo.", "Cuece o saltea el brócoli al vapor 5 minutos.", "Emplata todo junto con un chorrito de aceite de oliva."] },
+  { id: "r7", name: "Salmón al horno con quinoa y pimiento", meal: "comida", kcal: 590, p: 38, c: 48, g: 22, foodIds: ["f3", "f14", "f20"],
+    ingredients: ["180g de salmón", "70g de quinoa (peso en crudo)", "1 pimiento en tiras", "Limón, sal y aceite de oliva"],
+    steps: ["Precalienta el horno a 200ºC.", "Coloca el salmón y el pimiento en una bandeja con aceite, sal y limón.", "Hornea 15-18 minutos.", "Sirve con la quinoa cocida aparte."] },
+  { id: "r8", name: "Ternera salteada con patata y ensalada", meal: "comida", kcal: 570, p: 42, c: 46, g: 18, foodIds: ["f6", "f10", "f19"],
+    ingredients: ["180g de ternera magra en tiras", "250g de patata cocida", "Ensalada mixta al gusto", "Ajo, pimentón y aceite de oliva"],
+    steps: ["Cuece la patata con piel hasta que esté tierna.", "Saltea la ternera en tiras a fuego fuerte 3-4 minutos con ajo y pimentón.", "Pela y trocea la patata.", "Sirve todo junto con la ensalada aliñada."] },
+  { id: "r9", name: "Pasta integral con atún y verduras", meal: "comida", kcal: 540, p: 34, c: 62, g: 14, foodIds: ["f13", "f4", "f18"],
+    ingredients: ["90g de pasta integral (peso en crudo)", "1 lata de atún al natural", "Un puñado de espinacas", "Tomate triturado, ajo y aceite de oliva"],
+    steps: ["Cuece la pasta al dente.", "Sofríe el ajo y las espinacas con un poco de tomate triturado.", "Añade el atún escurrido y mezcla 2 minutos.", "Incorpora la pasta escurrida y saltea todo junto."] },
+  { id: "r10", name: "Garbanzos guisados con verduras", meal: "comida", kcal: 480, p: 24, c: 60, g: 14, foodIds: ["f26", "f20", "f17"],
+    ingredients: ["250g de garbanzos cocidos", "1 pimiento", "100g de brócoli", "Cebolla, tomate triturado, comino y aceite de oliva"],
+    steps: ["Sofríe la cebolla y el pimiento con aceite y comino.", "Añade el tomate triturado y cocina 5 minutos.", "Incorpora los garbanzos y el brócoli, cubre con agua y cuece 10-15 minutos."] },
+  { id: "r11", name: "Pavo a la plancha con boniato asado", meal: "comida", kcal: 520, p: 40, c: 50, g: 12, foodIds: ["f5", "f28", "f19"],
+    ingredients: ["180g de pavo fileteado", "200g de boniato", "Ensalada mixta", "Pimentón, sal y aceite de oliva"],
+    steps: ["Corta el boniato en gajos, añade aceite y pimentón y hornea a 200ºC 25-30 min.", "Cocina el pavo a la plancha 3-4 minutos por lado.", "Sirve con la ensalada aliñada."] },
+
+  { id: "r12", name: "Salmón con espinacas salteadas y patata", meal: "cena", kcal: 520, p: 36, c: 34, g: 22, foodIds: ["f3", "f18", "f10"],
+    ingredients: ["160g de salmón", "150g de espinacas", "200g de patata cocida", "Ajo y aceite de oliva"],
+    steps: ["Cocina el salmón a la plancha 3-4 minutos por lado.", "Saltea las espinacas con ajo hasta que reduzcan.", "Sirve con la patata cocida en rodajas."] },
+  { id: "r13", name: "Tortilla de claras con pavo y ensalada", meal: "cena", kcal: 380, p: 42, c: 12, g: 15, foodIds: ["f2", "f5", "f19"],
+    ingredients: ["3 huevos (o 4 claras + 1 huevo)", "80g de pavo fileteado en dados", "Ensalada mixta", "Sal y aceite de oliva"],
+    steps: ["Bate los huevos y mezcla con el pavo en dados.", "Cuaja la tortilla a fuego medio 3-4 minutos por lado.", "Sirve con la ensalada aliñada."] },
+  { id: "r14", name: "Lentejas estofadas con verduras", meal: "cena", kcal: 420, p: 22, c: 55, g: 10, foodIds: ["f27", "f17", "f20"],
+    ingredients: ["250g de lentejas cocidas", "1 pimiento", "100g de brócoli", "Cebolla, tomate triturado y pimentón"],
+    steps: ["Sofríe la cebolla y el pimiento con pimentón.", "Añade el tomate triturado y cocina 5 minutos.", "Incorpora las lentejas y el brócoli, cubre con caldo o agua y cuece 10 minutos."] },
+  { id: "r15", name: "Tofu salteado con verduras y arroz", meal: "cena", kcal: 430, p: 22, c: 48, g: 14, foodIds: ["f8", "f17", "f9"],
+    ingredients: ["200g de tofu en dados", "150g de brócoli", "60g de arroz (peso en crudo)", "Salsa de soja y jengibre"],
+    steps: ["Cuece el arroz.", "Saltea el tofu en dados hasta dorar por todos los lados.", "Añade el brócoli y saltea 4-5 minutos con salsa de soja y jengibre.", "Sirve sobre el arroz."] },
+  { id: "r16", name: "Ternera magra con pisto de verduras", meal: "cena", kcal: 460, p: 38, c: 26, g: 20, foodIds: ["f6", "f20", "f19"],
+    ingredients: ["160g de ternera magra", "1 pimiento", "Calabacín y tomate al gusto", "Ajo y aceite de oliva"],
+    steps: ["Cocina la ternera a la plancha al punto deseado.", "Pocha el pimiento, calabacín y tomate a fuego lento 15 minutos.", "Sirve la ternera con el pisto de verduras."] },
+  { id: "r17", name: "Ensalada completa de atún, huevo y aguacate", meal: "cena", kcal: 470, p: 32, c: 18, g: 30, foodIds: ["f4", "f2", "f21"],
+    ingredients: ["1 lata de atún al natural", "2 huevos cocidos", "1/2 aguacate", "Ensalada mixta y aceite de oliva"],
+    steps: ["Cuece los huevos 9-10 minutos y déjalos enfriar.", "Trocea el aguacate y los huevos.", "Mezcla todo con la ensalada, el atún escurrido y un chorrito de aceite."] },
+
+  { id: "r18", name: "Yogur griego con frutos secos", meal: "snack", kcal: 260, p: 15, c: 14, g: 15, foodIds: ["f7", "f23"],
+    ingredients: ["200g de yogur griego", "20g de frutos secos"],
+    steps: ["Sirve el yogur en un bol.", "Añade los frutos secos por encima."] },
+  { id: "r19", name: "Manzana con crema de cacahuete", meal: "snack", kcal: 250, p: 7, c: 26, g: 14, foodIds: ["f16", "f24"],
+    ingredients: ["1 manzana", "1 cucharada de crema de cacahuete"],
+    steps: ["Corta la manzana en gajos.", "Unta cada gajo con crema de cacahuete."] },
+  { id: "r20", name: "Atún con tostadas integrales", meal: "snack", kcal: 270, p: 24, c: 26, g: 6, foodIds: ["f4", "f12"],
+    ingredients: ["1 lata de atún al natural", "2 rebanadas de pan integral"],
+    steps: ["Tuesta el pan.", "Escurre el atún y repártelo sobre las tostadas."] },
+  { id: "r21", name: "Queso fresco batido con plátano", meal: "snack", kcal: 230, p: 15, c: 28, g: 4, foodIds: ["f25", "f15"],
+    ingredients: ["200g de queso fresco batido", "1 plátano"],
+    steps: ["Trocea el plátano.", "Mézclalo con el queso fresco batido."] },
+  { id: "r22", name: "Puñado de frutos secos y manzana", meal: "snack", kcal: 280, p: 8, c: 24, g: 18, foodIds: ["f23", "f16"],
+    ingredients: ["30g de frutos secos", "1 manzana"],
+    steps: ["Sirve los frutos secos en un bol junto a la manzana troceada."] },
+];
+
+/* ---------------- LA FORJA: el sistema único de FORJA ----------------
+   No es una racha ni una insignia genérica: cada día que cumples tu plan
+   (comidas marcadas + entreno si tocaba) das un "golpe de martillo" sobre
+   tu propia pieza. La pieza se forja de verdad, visualmente, con el tiempo:
+   metal en bruto -> al rojo -> templado -> forjado -> hoja legendaria.
+   Todo se calcula localmente a partir de tus propios registros. */
+const FORGE_TIERS = [
+  { min: 0, name: "Metal en bruto", phrase: "Todavía no has calentado la fragua. Cada día cumplido es un golpe de martillo.", base: "#3A3B29", glow: "#3A3B29", shine: false, sparks: 0 },
+  { min: 5, name: "Al rojo vivo", phrase: "El metal empieza a calentarse. Sigue así y tomará forma.", base: "#C1502E", glow: "#D9683F", shine: false, sparks: 1 },
+  { min: 15, name: "Templado", phrase: "El acero se está templando. Ya se nota la constancia en la pieza.", base: "#D9A441", glow: "#E7B85B", shine: true, sparks: 2 },
+  { min: 30, name: "Acero forjado", phrase: "Una pieza forjada de verdad. Pocos llegan tan lejos con la misma disciplina.", base: "#E7B85B", glow: "#F2EFE6", shine: true, sparks: 4 },
+  { min: 60, name: "Hoja legendaria", phrase: "Esto ya no es constancia: es maestría. Tu pieza es legendaria.", base: "#F2EFE6", glow: "#E7B85B", shine: true, sparks: 6 },
+];
+
+function forgeTierFor(golpes) {
+  let tier = FORGE_TIERS[0];
+  for (const t of FORGE_TIERS) if (golpes >= t.min) tier = t;
+  return tier;
+}
+
+// ¿Se cumplió el plan ese día? true / false / null (sin datos suficientes para juzgarlo)
+function computeDayForged({ mealsChecked, dayMenu, scheduledMuscle, exercisesDoneForDay, exercisesTotalForDay }) {
+  const plannedMeals = MEALS.filter((m) => dayMenu && dayMenu[m]);
+  const mealsOk = plannedMeals.length === 0 ? true : plannedMeals.every((m) => mealsChecked && mealsChecked[m]);
+  const trainingOk = !scheduledMuscle ? true : exercisesTotalForDay > 0 && exercisesDoneForDay >= Math.ceil(exercisesTotalForDay * 0.75);
+  return mealsOk && trainingOk;
+}
+
+/* ---------------- HELPERS ---------------- */
+function calcTDEE({ sex, age, height, weight, activity, bodyFatPct, frame }) {
+  let bmr;
+  if (bodyFatPct && bodyFatPct > 0 && bodyFatPct < 70) {
+    const leanMass = weight * (1 - bodyFatPct / 100);
+    bmr = 370 + 21.6 * leanMass; // Katch-McArdle: usa masa magra, no el peso total
+  } else {
+    bmr = sex === "mujer"
+      ? 10 * weight + 6.25 * height - 5 * age - 161
+      : 10 * weight + 6.25 * height - 5 * age + 5; // Mifflin-St Jeor
+  }
+  const frameFactor = frame === "ancha" ? 1.03 : frame === "estrecha" ? 0.97 : 1;
+  const factors = { sedentario: 1.2, ligero: 1.375, moderado: 1.55, activo: 1.725, atleta: 1.9 };
+  return Math.round(bmr * frameFactor * (factors[activity] || 1.375));
+}
+
+function calcMacros(tdee, goal, weight, bodyFatPct) {
+  let kcal = tdee;
+  if (goal === "perder") kcal = Math.round(tdee * 0.8);
+  if (goal === "ganar") kcal = Math.round(tdee * 1.12);
+  const leanMass = bodyFatPct && bodyFatPct > 0 && bodyFatPct < 70 ? weight * (1 - bodyFatPct / 100) : weight;
+  const proteinPerKg = bodyFatPct ? (goal === "perder" ? 2.4 : 2.2) : (goal === "perder" ? 2.2 : 2.0);
+  const protein = Math.round(leanMass * proteinPerKg);
+  const fat = Math.round((kcal * 0.25) / 9);
+  const carbsKcal = kcal - protein * 4 - fat * 9;
+  const carbs = Math.max(0, Math.round(carbsKcal / 4));
+  return { kcal, protein, fat, carbs };
+}
+
+function buildWeekMenu(likedIds, dislikedIds) {
+  const liked = new Set(likedIds);
+  const disliked = new Set(dislikedIds);
+  const pool = (meal) => {
+    let items = RECIPES.filter((r) => r.meal === meal && !r.foodIds.some((id) => disliked.has(id)));
+    if (items.length === 0) items = RECIPES.filter((r) => r.meal === meal); // si se descarta todo, no dejamos la comida vacía
+    const preferred = items.filter((r) => r.foodIds.some((id) => liked.has(id)));
+    return preferred.length >= 2 ? preferred : items;
+  };
+  const menu = {};
+  const recentByMeal = { desayuno: [], comida: [], cena: [], snack: [] };
+  DAYS.forEach((day) => {
+    menu[day] = {};
+    MEALS.forEach((meal) => {
+      const items = pool(meal);
+      if (items.length === 0) { menu[day][meal] = null; return; }
+      // evita repetir la misma receta que en los 2 días anteriores si hay alternativas
+      const recent = recentByMeal[meal];
+      const fresh = items.filter((r) => !recent.includes(r.id));
+      const choices = fresh.length ? fresh : items;
+      const picked = choices[Math.floor(Math.random() * choices.length)];
+      menu[day][meal] = picked;
+      recent.push(picked.id);
+      if (recent.length > 2) recent.shift();
+    });
+  });
+  return menu;
+}
+
+/* ---------------- STORAGE HOOK (localStorage real del navegador) ---------------- */
+const STORAGE_PREFIX = "forja:";
+
+function usePersisted(key, initial) {
+  const [value, setValue] = useState(initial);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_PREFIX + key);
+      if (raw) setValue(JSON.parse(raw));
+    } catch (e) { console.error("Error leyendo localStorage:", e); }
+    setLoaded(true);
+  }, [key]);
+  const persist = useCallback(async (next) => {
+    setValue(next);
+    try {
+      localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(next));
+      return true;
+    } catch (e) {
+      console.error("Error guardando en localStorage:", e);
+      return false;
+    }
+  }, [key]);
+  return [value, persist, loaded];
+}
+
+/* ============================================================
+   UI PRIMITIVES  (color/sombra/gradiente = siempre inline style)
+============================================================ */
+const Card = ({ children, className = "", style = {} }) => (
+  <div
+    className={`rounded-2xl p-4 ${className}`}
+    style={{
+      background: `linear-gradient(to bottom, ${C.surfaceTop}, ${C.surfaceBot})`,
+      border: `1px solid ${C.line}`,
+      boxShadow: "0 8px 24px -12px rgba(0,0,0,0.6)",
+      position: "relative",
+      overflow: "hidden",
+      ...style,
+    }}
+  >
+    {children}
+  </div>
+);
+
+const TONE_GRADIENTS = {
+  gold: `linear-gradient(to bottom, ${C.goldLight}, ${C.goldDark})`,
+  cut: `linear-gradient(to bottom, ${C.rustLight}, ${C.rustDark})`,
+  bulk: `linear-gradient(to bottom, ${C.mossLight}, ${C.mossDark})`,
+};
+const TONE_TEXT = { gold: C.bg, cut: C.cream, bulk: C.bg };
+
+const Pill = ({ active, onClick, children, tone = "gold" }) => (
+  <button
+    onClick={onClick}
+    className="px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-transform duration-150 active:scale-95"
+    style={{
+      background: active ? TONE_GRADIENTS[tone] : "transparent",
+      color: active ? TONE_TEXT[tone] : C.muted,
+      border: `1px solid ${active ? "transparent" : C.line}`,
+      boxShadow: active ? "0 2px 10px -2px rgba(0,0,0,0.5)" : "none",
+    }}
+  >
+    {children}
+  </button>
+);
+
+function HeroDial({ value, max, label }) {
+  const pct = Math.max(0, Math.min(1, max ? value / max : 0));
+  const r = 78, circ = 2 * Math.PI * r;
+  return (
+    <div className="relative flex items-center justify-center mx-auto" style={{ width: 200, height: 200 }}>
+      <svg width="200" height="200" viewBox="0 0 200 200" style={{ transform: "rotate(-90deg)" }}>
+        <circle cx="100" cy="100" r={r} stroke="#26271A" strokeWidth="14" fill="none" />
+        <circle cx="100" cy="100" r={r} stroke="url(#heroGrad)" strokeWidth="14" fill="none"
+          strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)} strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)" }} />
+        <defs>
+          <linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={C.goldLight} />
+            <stop offset="100%" stopColor={C.rust} />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span style={{ ...F_DISPLAY, fontSize: 44, lineHeight: 1, color: C.cream, fontVariantNumeric: "tabular-nums" }}>{Math.round(value)}</span>
+        <span style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>de {max} kcal</span>
+        <span style={{ fontSize: 10, color: C.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginTop: 8 }}>{label}</span>
+      </div>
+    </div>
+  );
+}
+
+function MacroBar({ value, max, color, label, icon: Icon }) {
+  const pct = Math.max(0, Math.min(1, max ? value / max : 0));
+  return (
+    <div className="flex items-center gap-2.5">
+      <Icon size={15} style={{ color }} className="shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between mb-1" style={{ fontSize: 11 }}>
+          <span style={{ color: C.muted, fontWeight: 500 }}>{label}</span>
+          <span style={{ color: C.mutedDark, fontVariantNumeric: "tabular-nums" }}>{Math.round(value)}/{max}g</span>
+        </div>
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#26271A" }}>
+          <div className="h-full rounded-full" style={{ width: `${pct * 100}%`, background: color, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   LA FORJA — pieza única de FORJA: un yunque y una pieza de metal
+   que se van forjando de verdad con tu constancia real.
+============================================================ */
+function LaForja({ tier, golpes, streak }) {
+  const nextTier = FORGE_TIERS.find((t) => t.min > golpes);
+  const prevMin = FORGE_TIERS[FORGE_TIERS.indexOf(tier)].min;
+  const span = nextTier ? nextTier.min - prevMin : 1;
+  const pct = nextTier ? Math.min(1, (golpes - prevMin) / span) : 1;
+  const sparkPositions = [
+    { x: 96, y: 58, delay: 0 }, { x: 130, y: 62, delay: 0.4 }, { x: 70, y: 66, delay: 0.8 },
+    { x: 112, y: 50, delay: 1.2 }, { x: 84, y: 48, delay: 1.6 }, { x: 146, y: 70, delay: 0.2 },
+  ].slice(0, tier.sparks);
+
+  return (
+    <div className="relative flex flex-col items-center py-2">
+      <style>{`
+        @keyframes forgeGlow { 0%,100% { filter: drop-shadow(0 0 4px ${tier.glow}66); } 50% { filter: drop-shadow(0 0 14px ${tier.glow}); } }
+        @keyframes forgeSpark { 0% { opacity: 0; transform: translateY(0) scale(0.4); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px) scale(1); } }
+        @keyframes forgeShine { 0% { transform: translateX(-60px) skewX(-20deg); } 100% { transform: translateX(160px) skewX(-20deg); } }
+        .forge-piece { animation: ${tier.min > 0 ? "forgeGlow 2.4s ease-in-out infinite" : "none"}; }
+        .forge-spark { animation: forgeSpark 1.8s ease-in infinite; }
+        .forge-shine { animation: forgeShine 2.6s ease-in-out infinite; }
+      `}</style>
+      <svg width="216" height="130" viewBox="0 0 216 130">
+        <defs>
+          <linearGradient id="pieceGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={tier.base} />
+            <stop offset="100%" stopColor={tier.glow} />
+          </linearGradient>
+          <clipPath id="pieceClip"><rect x="60" y="46" width="96" height="20" rx="6" /></clipPath>
+        </defs>
+        {/* base del yunque */}
+        <path d="M50 118 L166 118 L156 100 L60 100 Z" fill="#242617" />
+        <rect x="86" y="82" width="44" height="20" fill="#1B1C12" />
+        <path d="M40 82 L176 82 L166 68 L154 66 L62 66 L50 68 Z" fill="#2E301E" />
+        {/* pieza forjada */}
+        <g className="forge-piece">
+          <rect x="60" y="46" width="96" height="20" rx="6" fill="url(#pieceGrad)" />
+          {tier.shine && (
+            <g clipPath="url(#pieceClip)">
+              <rect className="forge-shine" x="0" y="40" width="24" height="32" fill="#FFFFFF" opacity="0.35" />
+            </g>
+          )}
+        </g>
+        {/* chispas */}
+        {sparkPositions.map((s, i) => (
+          <circle key={i} className="forge-spark" cx={s.x} cy={s.y} r="2" fill={tier.glow} style={{ animationDelay: `${s.delay}s` }} />
+        ))}
+      </svg>
+      <p style={{ ...F_HEAD, fontSize: 17, color: C.cream, letterSpacing: 0.5, marginTop: 4 }}>{tier.name}</p>
+      <p style={{ fontSize: 12, color: C.muted, textAlign: "center", marginTop: 2, maxWidth: 260, lineHeight: 1.4 }}>{tier.phrase}</p>
+      <div className="flex items-center gap-4 mt-3">
+        <div className="flex items-center gap-1.5">
+          <span style={{ ...F_DISPLAY, fontSize: 18, color: C.gold }}>{golpes}</span>
+          <span style={{ fontSize: 11, color: C.mutedDark }}>golpes de martillo</span>
+        </div>
+        {streak > 0 && (
+          <div className="flex items-center gap-1">
+            <Flame size={13} style={{ color: "#E08A6D" }} fill="#E08A6D" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#E08A6D" }}>{streak}</span>
+          </div>
+        )}
+      </div>
+      {nextTier && (
+        <div className="w-full mt-3" style={{ maxWidth: 240 }}>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#26271A" }}>
+            <div className="h-full rounded-full" style={{ width: `${pct * 100}%`, background: `linear-gradient(to right, ${tier.glow}, ${nextTier.base})`, transition: "width .6s ease" }} />
+          </div>
+          <p style={{ fontSize: 10, color: C.mutedDark, textAlign: "center", marginTop: 4 }}>{nextTier.min - golpes} golpes más para "{nextTier.name}"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB: HOY (DASHBOARD)
+============================================================ */
+function TabHoy({ profile, menu, dayLog, setDayLog, todayName, schedule, fastingLog, setFastingLog, forgeStats }) {
+  const macros = useMemo(() => calcMacros(calcTDEE(profile), profile.goal, profile.weight, profile.bodyFatPct), [profile]);
+  const eaten = dayLog[todayName]?.mealsChecked || {};
+  const todayMenu = menu?.[todayName] || {};
+  const [openMeal, setOpenMeal] = useState(null);
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const todayFast = fastingLog[dateKey] || { active: false, hours: "" };
+  const [hoursDraft, setHoursDraft] = useState(todayFast.hours ? String(todayFast.hours) : "");
+  useEffect(() => { setHoursDraft(todayFast.hours ? String(todayFast.hours) : ""); }, [dateKey]); // eslint-disable-line
+
+  const toggleFasting = () => {
+    const next = { ...fastingLog, [dateKey]: { active: !todayFast.active, hours: todayFast.hours || "" } };
+    setFastingLog(next);
+  };
+  const commitHours = (v) => {
+    if (!/^\d*[.,]?\d*$/.test(v)) return;
+    setHoursDraft(v);
+    setFastingLog({ ...fastingLog, [dateKey]: { active: true, hours: v } });
+  };
+
+  const consumed = useMemo(() => {
+    let kcal = 0, p = 0, c = 0, g = 0;
+    MEALS.forEach((meal) => {
+      const r = todayMenu[meal];
+      if (eaten[meal] && r) { kcal += r.kcal; p += r.p; c += r.c; g += r.g; }
+    });
+    return { kcal: Math.round(kcal), p: Math.round(p), c: Math.round(c), g: Math.round(g) };
+  }, [eaten, todayMenu]);
+
+  const toggleMeal = (meal) => {
+    const dl = { ...dayLog };
+    dl[todayName] = dl[todayName] || { mealsChecked: {} };
+    dl[todayName] = { ...dl[todayName], mealsChecked: { ...dl[todayName].mealsChecked, [meal]: !eaten[meal] } };
+    setDayLog(dl);
+  };
+
+  const muscle = schedule[todayName];
+  const goalTone = profile.goal === "perder" ? C.rustLight : profile.goal === "ganar" ? C.mossLight : C.gold;
+  const goalText = profile.goal === "perder" ? "Pérdida de grasa" : profile.goal === "ganar" ? "Ganancia muscular" : "Mantenimiento";
+
+  return (
+    <div className="space-y-4 pb-4">
+      <Card>
+        <LaForja tier={forgeStats.tier} golpes={forgeStats.golpes} streak={forgeStats.streak} />
+      </Card>
+
+      <Card>
+        <div className="absolute pointer-events-none" style={{ top: -64, left: "50%", transform: "translateX(-50%)", width: 224, height: 224, borderRadius: "50%", opacity: 0.2, filter: "blur(60px)", background: goalTone }} />
+        <div className="relative flex items-center justify-between mb-1">
+          <p style={{ color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5 }}>{todayName}</p>
+          <div className="px-2.5 py-1 rounded-full" style={{ background: `${goalTone}26`, color: goalTone, fontSize: 11, fontWeight: 600 }}>
+            {goalText}
+          </div>
+        </div>
+        <div className="relative py-2">
+          <HeroDial value={consumed.kcal} max={macros.kcal} label="Calorías de hoy" />
+        </div>
+        <div className="relative grid grid-cols-1 gap-3 mt-2 pt-4" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+          <MacroBar value={consumed.p} max={macros.protein} color={C.rustLight} label="Proteína" icon={Beef} />
+          <MacroBar value={consumed.c} max={macros.carbs} color={C.mossLight} label="Carbohidratos" icon={Wheat} />
+          <MacroBar value={consumed.g} max={macros.fat} color={C.blue} label="Grasa" icon={Droplet} />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-3">
+          <Utensils size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Comidas de hoy</h3>
+        </div>
+        <div className="space-y-1">
+          {MEALS.map((meal) => {
+            const r = todayMenu[meal];
+            const open = openMeal === meal;
+            return (
+              <div key={meal} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                <div className="flex items-center gap-3 py-2">
+                  <button onClick={() => toggleMeal(meal)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-transform duration-150 active:scale-90"
+                    style={{ background: eaten[meal] ? `linear-gradient(to bottom, ${C.mossLight}, ${C.mossDark})` : "transparent", border: `1px solid ${eaten[meal] ? "transparent" : "#4A4C36"}` }}>
+                    {eaten[meal] && <Check size={15} style={{ color: C.bg }} />}
+                  </button>
+                  <button className="flex-1 min-w-0 text-left" onClick={() => r && setOpenMeal(open ? null : meal)}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: C.cream }}>{MEAL_LABEL[meal]}</p>
+                    <p className="truncate" style={{ fontSize: 12, color: C.muted }}>{r ? r.name : "Sin planificar"}</p>
+                  </button>
+                  {r && <ChevronDown size={16} style={{ color: C.muted, transition: "transform .2s", transform: open ? "rotate(180deg)" : "none", flexShrink: 0 }} />}
+                </div>
+                {open && r && (
+                  <div className="pb-3 pl-10">
+                    <p style={{ fontSize: 11, color: C.mutedDark, marginBottom: 6 }}>{r.kcal} kcal · P{r.p} C{r.c} G{r.g}</p>
+                    <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: C.gold, marginBottom: 4 }}>Ingredientes</p>
+                    <ul style={{ fontSize: 13, color: C.muted, marginBottom: 8, paddingLeft: 16 }}>
+                      {r.ingredients.map((ing, i) => <li key={i} style={{ marginBottom: 2 }}>{ing}</li>)}
+                    </ul>
+                    <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: C.mossLight, marginBottom: 4 }}>Preparación</p>
+                    <ol style={{ fontSize: 13, color: C.muted, paddingLeft: 16 }}>
+                      {r.steps.map((s, i) => <li key={i} style={{ marginBottom: 4 }}>{s}</li>)}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock size={16} style={{ color: C.gold }} />
+            <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Ayuno de hoy</h3>
+          </div>
+          <button onClick={toggleFasting}
+            className="w-11 h-6 rounded-full flex items-center px-0.5 transition-colors duration-150"
+            style={{ background: todayFast.active ? `linear-gradient(to right, ${C.goldLight}, ${C.rust})` : "#2A2C1D", justifyContent: todayFast.active ? "flex-end" : "flex-start" }}>
+            <div className="w-5 h-5 rounded-full" style={{ background: C.cream }} />
+          </button>
+        </div>
+        {todayFast.active && (
+          <div className="flex items-center gap-2 mt-3">
+            <span style={{ fontSize: 14, color: C.muted }}>Duración del ayuno</span>
+            <input type="text" inputMode="decimal" value={hoursDraft} onChange={(e) => commitHours(e.target.value)}
+              placeholder="ej. 16" className="w-16 text-right rounded-lg px-2 py-1 outline-none"
+              style={{ background: C.input, border: `1px solid ${C.line}`, color: C.cream, fontSize: 14, fontWeight: 700 }} />
+            <span style={{ fontSize: 14, color: C.muted }}>horas</span>
+          </div>
+        )}
+        {!todayFast.active && <p style={{ fontSize: 12, color: C.mutedDark, marginTop: 6 }}>Activa el interruptor si hoy has hecho ayuno, y anota cuántas horas.</p>}
+      </Card>
+
+      <Card>
+        <Dumbbell size={120} className="absolute pointer-events-none" style={{ right: -24, bottom: -24, opacity: 0.06, color: C.cream }} />
+        <div className="relative flex items-center gap-2 mb-2">
+          <Dumbbell size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Entreno de hoy</h3>
+        </div>
+        {muscle ? (
+          <p className="relative" style={{ fontSize: 14, color: C.muted }}>Toca <span style={{ color: C.gold, fontWeight: 700 }}>{muscle}</span> — {EXERCISES[muscle].length} ejercicios. Ve a la pestaña Entreno.</p>
+        ) : (
+          <p className="relative" style={{ fontSize: 14, color: C.muted }}>Día de descanso. Aprovecha para estirar y dormir bien.</p>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB: NUTRICIÓN
+============================================================ */
+function TabNutricion({ prefs, setPrefs, menu, regenMenu }) {
+  const [view, setView] = useState("menu");
+  const [openDay, setOpenDay] = useState(DAYS[0]);
+  const [openRecipe, setOpenRecipe] = useState(null); // `${day}-${meal}`
+
+  const toggleLike = (id) => {
+    const liked = new Set(prefs.liked);
+    const disliked = new Set(prefs.disliked);
+    disliked.delete(id);
+    liked.has(id) ? liked.delete(id) : liked.add(id);
+    setPrefs({ liked: [...liked], disliked: [...disliked] });
+  };
+  const toggleDislike = (id) => {
+    const liked = new Set(prefs.liked);
+    const disliked = new Set(prefs.disliked);
+    liked.delete(id);
+    disliked.has(id) ? disliked.delete(id) : disliked.add(id);
+    setPrefs({ liked: [...liked], disliked: [...disliked] });
+  };
+
+  const grouped = useMemo(() => {
+    const g = {};
+    FOODS.forEach((f) => { g[f.cat] = g[f.cat] || []; g[f.cat].push(f); });
+    return g;
+  }, []);
+
+  return (
+    <div className="space-y-4 pb-4">
+      <div className="flex gap-2">
+        <Pill active={view === "menu"} onClick={() => setView("menu")}>Menú semanal</Pill>
+        <Pill active={view === "prefs"} onClick={() => setView("prefs")}>Mis gustos</Pill>
+      </div>
+
+      {view === "prefs" && (
+        <Card>
+          <p style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Marca lo que te gusta (❤) o no comes (🚫). Las recetas del menú solo usarán ingredientes que no hayas descartado, y priorizarán tus favoritos.</p>
+          {Object.entries(grouped).map(([cat, items]) => (
+            <div key={cat} className="mb-4 last:mb-0">
+              <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, color: C.gold, marginBottom: 8 }}>{cat}</p>
+              <div className="space-y-1.5">
+                {items.map((f) => {
+                  const liked = prefs.liked.includes(f.id);
+                  const disliked = prefs.disliked.includes(f.id);
+                  return (
+                    <div key={f.id} className="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style={{ background: C.input }}>
+                      <div className="min-w-0">
+                        <p className="truncate" style={{ fontSize: 14, color: C.cream }}>{f.name}</p>
+                        <p style={{ fontSize: 11, color: C.mutedDark }}>{f.kcal} kcal · P{f.p} C{f.c} G{f.g} /100g</p>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        <button onClick={() => toggleLike(f.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90"
+                          style={{ background: liked ? C.rust : "transparent", border: `1px solid ${liked ? C.rust : C.line}` }}>
+                          <Heart size={14} style={{ color: liked ? "#fff" : C.mutedDark }} fill={liked ? "#fff" : "none"} />
+                        </button>
+                        <button onClick={() => toggleDislike(f.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90"
+                          style={{ background: disliked ? "#4A4C36" : "transparent", border: `1px solid ${disliked ? "#4A4C36" : C.line}` }}>
+                          <HeartOff size={14} style={{ color: disliked ? "#fff" : C.mutedDark }} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {view === "menu" && (
+        <>
+          <button onClick={regenMenu} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-transform active:scale-[0.98]"
+            style={{ background: TONE_GRADIENTS.gold, color: C.bg, ...F_HEAD, letterSpacing: 0.5, fontSize: 14 }}>
+            <RotateCcw size={15} /> Generar nuevo menú con mis gustos
+          </button>
+          <div className="space-y-2">
+            {DAYS.map((day) => (
+              <Card key={day} style={{ padding: 0 }}>
+                <button onClick={() => setOpenDay(openDay === day ? null : day)} className="w-full flex items-center justify-between px-4 py-3">
+                  <span style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>{day}</span>
+                  <ChevronDown size={18} style={{ color: C.muted, transition: "transform .2s", transform: openDay === day ? "rotate(180deg)" : "none" }} />
+                </button>
+                {openDay === day && (
+                  <div className="px-4 pb-4 space-y-1 pt-3" style={{ borderTop: `1px solid ${C.lineSoft}` }}>
+                    {MEALS.map((meal) => {
+                      const r = menu[day]?.[meal];
+                      const key = `${day}-${meal}`;
+                      const open = openRecipe === key;
+                      return (
+                        <div key={meal} className="py-2" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+                          <button className="w-full flex items-center justify-between text-left" onClick={() => r && setOpenRecipe(open ? null : key)}>
+                            <div className="min-w-0">
+                              <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, color: C.mossLight, marginBottom: 2 }}>{MEAL_LABEL[meal]}</p>
+                              <p className="truncate" style={{ fontSize: 14, color: C.cream }}>{r ? r.name : "Añade favoritos para generar esta comida"}</p>
+                            </div>
+                            {r && <ChevronDown size={15} style={{ color: C.muted, flexShrink: 0, marginLeft: 8, transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />}
+                          </button>
+                          {open && r && (
+                            <div className="mt-2">
+                              <p style={{ fontSize: 11, color: C.mutedDark, marginBottom: 6 }}>{r.kcal} kcal · P{r.p} C{r.c} G{r.g}</p>
+                              <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: C.gold, marginBottom: 4 }}>Ingredientes</p>
+                              <ul style={{ fontSize: 13, color: C.muted, marginBottom: 8, paddingLeft: 16 }}>
+                                {r.ingredients.map((ing, i) => <li key={i} style={{ marginBottom: 2 }}>{ing}</li>)}
+                              </ul>
+                              <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: C.mossLight, marginBottom: 4 }}>Preparación</p>
+                              <ol style={{ fontSize: 13, color: C.muted, paddingLeft: 16 }}>
+                                {r.steps.map((s, i) => <li key={i} style={{ marginBottom: 4 }}>{s}</li>)}
+                              </ol>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB: ENTRENO
+============================================================ */
+function TabEntreno({ workoutLog, setWorkoutLog, todayName, schedule }) {
+  const [group, setGroup] = useState(schedule[todayName] || MUSCLE_GROUPS[0]);
+  useEffect(() => { setGroup(schedule[todayName] || MUSCLE_GROUPS[0]); }, [todayName]); // eslint-disable-line
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const doneSet = new Set(workoutLog[dateKey] || []);
+
+  const toggleDone = (exId) => {
+    const arr = new Set(workoutLog[dateKey] || []);
+    arr.has(exId) ? arr.delete(exId) : arr.add(exId);
+    setWorkoutLog({ ...workoutLog, [dateKey]: [...arr] });
+  };
+
+  return (
+    <div className="space-y-4 pb-4">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {MUSCLE_GROUPS.map((g) => (
+          <Pill key={g} active={group === g} onClick={() => setGroup(g)} tone="bulk">{g}</Pill>
+        ))}
+      </div>
+      <p style={{ fontSize: 12, color: C.muted }}>Hoy ({todayName}) toca <span style={{ color: C.gold }}>{schedule[todayName] || "descanso"}</span> según tu plan semanal.</p>
+
+      <div className="space-y-3">
+        {EXERCISES[group].map((ex) => {
+          const done = doneSet.has(ex.id);
+          return (
+            <Card key={ex.id} style={{ borderColor: done ? C.moss : C.line }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h4 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>{ex.name}</h4>
+                  <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{ex.series} series × {ex.reps} reps</p>
+                  <p style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>{ex.desc}</p>
+                  <a href={ytLink(ex.name)} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-3 rounded-full px-3 py-1.5"
+                    style={{ fontSize: 12, fontWeight: 700, color: C.gold, border: `1px solid ${C.gold}66` }}>
+                    <Play size={12} fill={C.gold} color={C.gold} /> Ver vídeo explicativo
+                  </a>
+                </div>
+                <button onClick={() => toggleDone(ex.id)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-90"
+                  style={{ background: done ? `linear-gradient(to bottom, ${C.mossLight}, ${C.mossDark})` : "transparent", border: `1px solid ${done ? "transparent" : C.line}` }}>
+                  {done ? <Check size={16} style={{ color: C.bg }} /> : <span style={{ color: C.mutedDark, fontSize: 12 }}>✓</span>}
+                </button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB: PROGRESO
+============================================================ */
+function TabProgreso({ progress, setProgress, fastingLog }) {
+  const [weight, setWeight] = useState("");
+  const sorted = [...progress].sort((a, b) => a.date.localeCompare(b.date));
+  const addEntry = () => {
+    const w = parseFloat(weight);
+    if (!w) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const filtered = progress.filter((p) => p.date !== today);
+    setProgress([...filtered, { date: today, weight: w }]);
+    setWeight("");
+  };
+
+  const max = Math.max(...sorted.map((p) => p.weight), 1);
+  const min = Math.min(...sorted.map((p) => p.weight), max);
+  const range = max - min || 1;
+
+  const recentFasts = Object.entries(fastingLog || {})
+    .filter(([, v]) => v && v.active)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .slice(0, 10);
+
+  return (
+    <div className="space-y-4 pb-4">
+      <Card>
+        <div className="flex items-center gap-2 mb-3">
+          <Scale size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Registrar peso de hoy</h3>
+        </div>
+        <div className="flex gap-2">
+          <input type="number" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)}
+            placeholder="Ej. 78.5" className="flex-1 rounded-xl px-3 py-2 outline-none"
+            style={{ background: C.input, border: `1px solid ${C.line}`, color: C.cream, fontSize: 14 }} />
+          <button onClick={addEntry} className="px-4 rounded-xl" style={{ background: C.gold, color: C.bg, fontSize: 14, fontWeight: 700 }}>Guardar</button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Evolución del peso</h3>
+        </div>
+        {sorted.length < 2 ? (
+          <p style={{ fontSize: 14, color: C.muted }}>Registra al menos dos días para ver tu evolución.</p>
+        ) : (
+          <svg viewBox="0 0 300 120" className="w-full h-32">
+            <polyline
+              fill="none" stroke={C.mossLight} strokeWidth="2.5"
+              points={sorted.map((p, i) => {
+                const x = (i / (sorted.length - 1)) * 280 + 10;
+                const y = 100 - ((p.weight - min) / range) * 80;
+                return `${x},${y}`;
+              }).join(" ")}
+            />
+            {sorted.map((p) => {
+              const i = sorted.indexOf(p);
+              const x = (i / (sorted.length - 1)) * 280 + 10;
+              const y = 100 - ((p.weight - min) / range) * 80;
+              return <circle key={p.date} cx={x} cy={y} r="3" fill={C.gold} />;
+            })}
+          </svg>
+        )}
+        {sorted.length > 0 && (
+          <div className="flex justify-between mt-2" style={{ fontSize: 12, color: C.muted }}>
+            <span>{sorted[0].date}</span>
+            <span style={{ color: C.gold, fontWeight: 700 }}>{sorted[sorted.length - 1].weight} kg</span>
+            <span>{sorted[sorted.length - 1].date}</span>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-3">
+          <Clock size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Ayunos recientes</h3>
+        </div>
+        {recentFasts.length === 0 ? (
+          <p style={{ fontSize: 14, color: C.muted }}>Todavía no has marcado ningún día de ayuno.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {recentFasts.map(([date, v]) => (
+              <div key={date} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: C.input }}>
+                <span style={{ fontSize: 13, color: C.cream }}>{date}</span>
+                <span style={{ fontSize: 13, color: C.gold, fontWeight: 700 }}>{v.hours ? `${v.hours}h` : "sin horas"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   TAB: PERFIL
+============================================================ */
+function TabPerfil({ profile, setProfile, schedule, setSchedule, exportData, importData }) {
+  const [local, setLocal] = useState(profile);
+  const [saveState, setSaveState] = useState(null);
+  const [backupText, setBackupText] = useState("");
+  const [backupState, setBackupState] = useState(null); // "copied" | "restoring" | "restored" | "error"
+  const [showRestore, setShowRestore] = useState(false);
+  const [pasteValue, setPasteValue] = useState("");
+  useEffect(() => setLocal(profile), [profile]);
+  const numeric = (o) => ({
+    ...o,
+    age: Number(String(o.age).replace(",", ".")) || 0,
+    height: Number(String(o.height).replace(",", ".")) || 0,
+    weight: Number(String(o.weight).replace(",", ".")) || 0,
+    bodyFatPct: o.bodyFatPct !== "" && o.bodyFatPct != null ? (Number(String(o.bodyFatPct).replace(",", ".")) || null) : null,
+    muscleMassPct: o.muscleMassPct !== "" && o.muscleMassPct != null ? (Number(String(o.muscleMassPct).replace(",", ".")) || null) : null,
+  });
+  const macros = useMemo(() => {
+    const n = numeric(local);
+    return calcMacros(calcTDEE(n), local.goal, n.weight, n.bodyFatPct);
+  }, [local]);
+  const trainingDays = DAYS.filter((d) => schedule[d]).length;
+
+  const field = (label, key) => (
+    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+      <span style={{ fontSize: 14, color: C.muted }}>{label}</span>
+      <input type="text" inputMode="decimal" value={local[key]}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (/^\d*[.,]?\d*$/.test(v)) setLocal({ ...local, [key]: v });
+        }}
+        className="w-28 text-right bg-transparent outline-none"
+        style={{ color: C.cream, fontSize: 14, fontWeight: 700, border: "none" }} />
+    </div>
+  );
+
+  const statCard = (Icon, iconColor, label, val) => (
+    <div className="rounded-xl p-3 flex items-center gap-2" style={{ background: C.input }}>
+      <Icon size={18} style={{ color: iconColor }} />
+      <div><p style={{ fontSize: 11, color: C.muted }}>{label}</p><p style={{ ...F_HEAD, fontSize: 18, color: C.cream }}>{val}</p></div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 pb-4">
+      <Card>
+        <div className="flex items-center gap-2 mb-2">
+          <User size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Tus datos</h3>
+        </div>
+        {field("Edad (años)", "age")}
+        {field("Altura (cm)", "height")}
+        {field("Peso actual (kg)", "weight")}
+        <div className="flex items-center justify-between py-2.5" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <span style={{ fontSize: 14, color: C.muted }}>Sexo</span>
+          <div className="flex gap-2">
+            <Pill active={local.sex === "hombre"} onClick={() => setLocal({ ...local, sex: "hombre" })}>Hombre</Pill>
+            <Pill active={local.sex === "mujer"} onClick={() => setLocal({ ...local, sex: "mujer" })}>Mujer</Pill>
+          </div>
+        </div>
+        <div className="py-2.5" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <span style={{ fontSize: 14, color: C.muted, display: "block", marginBottom: 8 }}>Actividad diaria</span>
+          <div className="flex gap-2 overflow-x-auto">
+            {["sedentario", "ligero", "moderado", "activo", "atleta"].map((a) => (
+              <Pill key={a} active={local.activity === a} onClick={() => setLocal({ ...local, activity: a })}>{a}</Pill>
+            ))}
+          </div>
+        </div>
+        <div className="py-2.5">
+          <span style={{ fontSize: 14, color: C.muted, display: "block", marginBottom: 8 }}>Objetivo</span>
+          <div className="flex gap-2">
+            <Pill active={local.goal === "perder"} onClick={() => setLocal({ ...local, goal: "perder" })} tone="cut">Perder grasa</Pill>
+            <Pill active={local.goal === "mantener"} onClick={() => setLocal({ ...local, goal: "mantener" })}>Mantener</Pill>
+            <Pill active={local.goal === "ganar"} onClick={() => setLocal({ ...local, goal: "ganar" })} tone="bulk">Ganar músculo</Pill>
+          </div>
+        </div>
+        <div className="py-2.5" style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
+          <span style={{ fontSize: 14, color: C.muted, display: "block", marginBottom: 8 }}>Complexión</span>
+          <div className="flex gap-2">
+            <Pill active={local.frame === "estrecha"} onClick={() => setLocal({ ...local, frame: "estrecha" })}>Estrecha</Pill>
+            <Pill active={local.frame === "media"} onClick={() => setLocal({ ...local, frame: "media" })}>Media</Pill>
+            <Pill active={local.frame === "ancha"} onClick={() => setLocal({ ...local, frame: "ancha" })}>Ancha</Pill>
+          </div>
+        </div>
+        {field("% grasa corporal (opcional)", "bodyFatPct")}
+        {field("% masa muscular (opcional)", "muscleMassPct")}
+        <p style={{ fontSize: 11, color: C.mutedDark, marginTop: 4 }}>
+          Si tienes una báscula de bioimpedancia, indica tu % de grasa: usamos tu masa magra (fórmula Katch-McArdle) en vez de solo el peso total para calcular calorías y proteína — mucho más preciso si tienes bastante músculo y bastante grasa a la vez. La complexión ajusta ligeramente el metabolismo base.
+        </p>
+        <button onClick={async () => {
+            setSaveState("saving");
+            const ok = await setProfile(numeric(local));
+            setSaveState(ok ? "ok" : "error");
+            setTimeout(() => setSaveState((s) => (s === "ok" ? null : s)), 2200);
+          }} className="w-full mt-3 py-2.5 rounded-xl"
+          style={{ background: TONE_GRADIENTS.gold, color: C.bg, ...F_HEAD, letterSpacing: 0.5, fontSize: 14 }}>
+          {saveState === "saving" ? "Guardando…" : "Guardar y recalcular"}
+        </button>
+        {saveState === "ok" && <p style={{ fontSize: 12, color: C.mossLight, marginTop: 8, textAlign: "center" }}>✓ Datos guardados</p>}
+        {saveState === "error" && (
+          <p style={{ fontSize: 12, color: C.rustLight, marginTop: 8, textAlign: "center" }}>
+            Tus macros de arriba ya están recalculados y funcionan en esta sesión, pero no se han podido guardar en este navegador. Comprueba que no tienes la navegación privada activada ni el almacenamiento del sitio bloqueado.
+          </p>
+        )}
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-3">
+          <Target size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Tus macros diarios</h3>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {statCard(Flame, C.gold, "Calorías", macros.kcal)}
+          {statCard(Beef, C.rust, "Proteína", `${macros.protein}g`)}
+          {statCard(Wheat, C.moss, "Carbos", `${macros.carbs}g`)}
+          {statCard(Droplet, C.blue, "Grasa", `${macros.fat}g`)}
+        </div>
+        <p style={{ fontSize: 11, color: C.mutedDark, marginTop: 12 }}>Calculado con la fórmula Mifflin-St Jeor según tus datos y nivel de actividad. Ajusta cada 2-3 semanas según tu progreso real.</p>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={16} style={{ color: C.gold }} />
+            <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Tu plan de entreno</h3>
+          </div>
+          <span style={{ fontSize: 11, color: C.muted }}>{trainingDays} {trainingDays === 1 ? "día" : "días"}/sem</span>
+        </div>
+        <p style={{ fontSize: 12, color: C.mutedDark, marginBottom: 12 }}>Elige qué días entrenas y qué grupo trabajas cada uno. Marca "Descanso" en el resto. Así cada persona ajusta su propio calendario.</p>
+        <div className="space-y-3">
+          {DAYS.map((day, i) => (
+            <div key={day} className="pb-3" style={{ borderBottom: i < DAYS.length - 1 ? `1px solid ${C.lineSoft}` : "none" }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: C.cream, marginBottom: 6 }}>{day}</p>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                <Pill active={!schedule[day]} onClick={() => setSchedule({ ...schedule, [day]: null })} tone="cut">
+                  Descanso
+                </Pill>
+                {MUSCLE_GROUPS.map((g) => (
+                  <Pill key={g} active={schedule[day] === g} onClick={() => setSchedule({ ...schedule, [day]: g })} tone="bulk">
+                    {g}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-2">
+          <CalendarDays size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Sincronización</h3>
+        </div>
+        <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>Esta app funciona en el navegador y no puede conectarse directamente con el Apple Watch o Apple Health — eso exige una app nativa con permisos de HealthKit. Por ahora el peso y los entrenos se registran a mano, en unos segundos, desde las pestañas Progreso y Entreno.</p>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-2 mb-2">
+          <Scale size={16} style={{ color: C.gold }} />
+          <h3 style={{ ...F_HEAD, color: C.cream, letterSpacing: 0.5 }}>Copia de seguridad manual</h3>
+        </div>
+        <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 12 }}>
+          Si el guardado automático falla en tu dispositivo, usa esto como red de apoyo: copia tus datos como texto y pégalos en Notas. Cuando vuelvas a abrir la app, pega ese texto aquí para recuperarlo todo.
+        </p>
+        <button onClick={async () => {
+            const json = exportData();
+            setBackupText(json);
+            try {
+              await navigator.clipboard.writeText(json);
+              setBackupState("copied");
+            } catch (e) {
+              setBackupState("manual");
+            }
+            setTimeout(() => setBackupState((s) => (s === "copied" ? null : s)), 2500);
+          }} className="w-full py-2.5 rounded-xl mb-2"
+          style={{ background: TONE_GRADIENTS.bulk, color: C.bg, ...F_HEAD, letterSpacing: 0.5, fontSize: 14 }}>
+          Copiar mis datos
+        </button>
+        {backupState === "copied" && <p style={{ fontSize: 12, color: C.mossLight, textAlign: "center", marginBottom: 8 }}>✓ Copiado — pégalo en Notas para guardarlo</p>}
+        {backupState === "manual" && (
+          <div className="mb-2">
+            <p style={{ fontSize: 12, color: C.rustLight, marginBottom: 6 }}>No se pudo copiar automáticamente. Selecciona y copia este texto a mano:</p>
+            <textarea readOnly value={backupText} onFocus={(e) => e.target.select()}
+              className="w-full rounded-xl p-2 outline-none" rows={4}
+              style={{ background: C.input, border: `1px solid ${C.line}`, color: C.cream, fontSize: 11, fontFamily: "monospace" }} />
+          </div>
+        )}
+        <button onClick={() => setShowRestore(!showRestore)} className="w-full py-2.5 rounded-xl" style={{ border: `1px solid ${C.line}`, color: C.muted, fontSize: 14, fontWeight: 600 }}>
+          {showRestore ? "Ocultar restauración" : "Restaurar desde un texto guardado"}
+        </button>
+        {showRestore && (
+          <div className="mt-2">
+            <textarea value={pasteValue} onChange={(e) => setPasteValue(e.target.value)} placeholder="Pega aquí el texto que copiaste antes…"
+              className="w-full rounded-xl p-2 outline-none" rows={4}
+              style={{ background: C.input, border: `1px solid ${C.line}`, color: C.cream, fontSize: 12 }} />
+            <button onClick={async () => {
+                setBackupState("restoring");
+                const ok = await importData(pasteValue);
+                setBackupState(ok ? "restored" : "error");
+                setTimeout(() => setBackupState((s) => (s === "restored" ? null : s)), 2500);
+              }} className="w-full mt-2 py-2.5 rounded-xl"
+              style={{ background: TONE_GRADIENTS.gold, color: C.bg, ...F_HEAD, letterSpacing: 0.5, fontSize: 14 }}>
+              {backupState === "restoring" ? "Restaurando…" : "Restaurar estos datos"}
+            </button>
+            {backupState === "restored" && <p style={{ fontSize: 12, color: C.mossLight, textAlign: "center", marginTop: 8 }}>✓ Datos restaurados</p>}
+            {backupState === "error" && <p style={{ fontSize: 12, color: C.rustLight, textAlign: "center", marginTop: 8 }}>El texto no es válido. Comprueba que lo has pegado completo.</p>}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP ROOT
+============================================================ */
+function App() {
+  const [tab, setTab] = useState("hoy");
+  const todayName = DAYS[(new Date().getDay() + 6) % 7];
+
+  const [profile, setProfile, profileLoaded] = usePersisted("perfil", {
+    age: 32, height: 175, weight: 78, sex: "hombre", activity: "ligero", goal: "perder",
+    frame: "media", bodyFatPct: "", muscleMassPct: "",
+  });
+  const [prefs, setPrefs, prefsLoaded] = usePersisted("preferencias_comida", { liked: [], disliked: [] });
+  const [menu, setMenu, menuLoaded] = usePersisted("menu_semanal", null);
+  const [dayLog, setDayLog] = usePersisted("registro_comidas", {});
+  const [workoutLog, setWorkoutLog] = usePersisted("registro_entreno", {});
+  const [progress, setProgress] = usePersisted("progreso_peso", []);
+  const [schedule, setSchedule, scheduleLoaded] = usePersisted("horario_entreno", DEFAULT_SCHEDULE);
+  const [fastingLog, setFastingLog] = usePersisted("registro_ayuno", {});
+  const [forgeLog, setForgeLog] = usePersisted("registro_forja", {});
+
+  const ready = profileLoaded && prefsLoaded && menuLoaded && scheduleLoaded;
+  const todayDateKey = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (ready && !menu) setMenu(buildWeekMenu(prefs.liked, prefs.disliked));
+  }, [ready, menu]); // eslint-disable-line
+
+  // Recalcula si hoy cuenta como "día forjado" cada vez que cambian los registros del día
+  useEffect(() => {
+    if (!ready || !menu) return;
+    const scheduledMuscle = schedule[todayName];
+    const exercisesTotalForDay = scheduledMuscle ? EXERCISES[scheduledMuscle].length : 0;
+    const doneSet = workoutLog[todayDateKey] || [];
+    const exercisesDoneForDay = scheduledMuscle ? doneSet.filter((id) => EXERCISES[scheduledMuscle].some((e) => e.id === id)).length : 0;
+    const forged = computeDayForged({
+      mealsChecked: dayLog[todayName]?.mealsChecked,
+      dayMenu: menu[todayName],
+      scheduledMuscle,
+      exercisesDoneForDay,
+      exercisesTotalForDay,
+    });
+    if (forgeLog[todayDateKey] !== forged) {
+      setForgeLog({ ...forgeLog, [todayDateKey]: forged });
+    }
+  }, [ready, menu, schedule, workoutLog, dayLog, todayName, todayDateKey]); // eslint-disable-line
+
+  const forgeStats = useMemo(() => {
+    const golpes = Object.values(forgeLog).filter(Boolean).length;
+    let streak = 0;
+    for (let i = 0; i < 90; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      if (forgeLog[key]) { streak++; continue; }
+      break;
+    }
+    return { golpes, streak, tier: forgeTierFor(golpes) };
+  }, [forgeLog]);
+
+  const regenMenu = () => setMenu(buildWeekMenu(prefs.liked, prefs.disliked));
+
+  const exportData = () => JSON.stringify({
+    v: 1, profile, prefs, menu, dayLog, workoutLog, progress, schedule, fastingLog, forgeLog,
+  });
+
+  const importData = async (text) => {
+    try {
+      const d = JSON.parse(text);
+      if (!d || typeof d !== "object") return false;
+      const tasks = [];
+      if (d.profile) tasks.push(setProfile(d.profile));
+      if (d.prefs) tasks.push(setPrefs(d.prefs));
+      if (d.menu) tasks.push(setMenu(d.menu));
+      if (d.dayLog) tasks.push(setDayLog(d.dayLog));
+      if (d.workoutLog) tasks.push(setWorkoutLog(d.workoutLog));
+      if (d.progress) tasks.push(setProgress(d.progress));
+      if (d.schedule) tasks.push(setSchedule(d.schedule));
+      if (d.fastingLog) tasks.push(setFastingLog(d.fastingLog));
+      if (d.forgeLog) tasks.push(setForgeLog(d.forgeLog));
+      await Promise.all(tasks);
+      return true;
+    } catch (e) {
+      console.error("Error al restaurar:", e);
+      return false;
+    }
+  };
+
+  const TABS = [
+    { id: "hoy", label: "Hoy", icon: Sparkles },
+    { id: "nutricion", label: "Nutrición", icon: Salad },
+    { id: "entreno", label: "Entreno", icon: Dumbbell },
+    { id: "progreso", label: "Progreso", icon: TrendingUp },
+    { id: "perfil", label: "Perfil", icon: User },
+  ];
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}>
+        <p style={{ color: C.muted, fontSize: 14 }}>Cargando…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col relative" style={{ background: `radial-gradient(120% 60% at 50% -10%, ${C.glow} 0%, ${C.bg} 55%), ${C.bg}`, fontFamily: "'Inter', sans-serif" }}>
+      <style>{`
+        ${FONT_IMPORT}
+        @keyframes tabIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-enter { animation: tabIn .28s cubic-bezier(.4,0,.2,1); }
+        input::placeholder { color: ${C.mutedDark}; }
+      `}</style>
+
+      <header className="px-4 pt-6 pb-3 sticky top-0 z-10" style={{ background: `${C.bg}E6`, backdropFilter: "blur(10px)", borderBottom: `1px solid #242617` }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C.goldLight}, ${C.rustDark})`, boxShadow: "0 2px 12px -2px rgba(217,164,65,0.5)" }}>
+              <Dumbbell size={17} style={{ color: C.bg }} />
+            </div>
+            <div>
+              <h1 style={{ ...F_DISPLAY, fontSize: 20, color: C.cream, letterSpacing: 0.5, lineHeight: 1 }}>FORJA</h1>
+              <p style={{ fontSize: 9, color: C.mutedDark, letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>Nutrición + Entreno</p>
+            </div>
+          </div>
+          {forgeStats.streak > 0 && (
+            <div className="flex items-center gap-1 rounded-full pl-2 pr-2.5 py-1" style={{ background: `${C.rustLight}26`, border: `1px solid ${C.rustLight}66` }}>
+              <Flame size={13} style={{ color: "#E08A6D" }} fill="#E08A6D" />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#E08A6D" }}>{forgeStats.streak}</span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <main key={tab} className="tab-enter flex-1 px-4 pt-4 overflow-y-auto pb-24 max-w-md mx-auto w-full relative" style={{ zIndex: 1 }}>
+        {tab === "hoy" && <TabHoy profile={profile} menu={menu || {}} dayLog={dayLog} setDayLog={setDayLog} todayName={todayName} schedule={schedule} fastingLog={fastingLog} setFastingLog={setFastingLog} forgeStats={forgeStats} />}
+        {tab === "nutricion" && <TabNutricion prefs={prefs} setPrefs={setPrefs} menu={menu || {}} regenMenu={regenMenu} />}
+        {tab === "entreno" && <TabEntreno workoutLog={workoutLog} setWorkoutLog={setWorkoutLog} todayName={todayName} schedule={schedule} />}
+        {tab === "progreso" && <TabProgreso progress={progress} setProgress={setProgress} fastingLog={fastingLog} />}
+        {tab === "perfil" && <TabPerfil profile={profile} setProfile={setProfile} schedule={schedule} setSchedule={setSchedule} exportData={exportData} importData={importData} />}
+      </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto w-full z-10" style={{ background: `${C.navBg}F2`, backdropFilter: "blur(10px)", borderTop: `1px solid ${C.lineSoft}` }}>
+        <div className="flex justify-around py-2 px-1">
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)} className="flex flex-col items-center gap-1 px-2 py-1.5 flex-1 relative">
+                <div className="absolute rounded-full transition-opacity duration-200" style={{ left: 8, right: 8, top: -8, height: 3, opacity: active ? 1 : 0, background: `linear-gradient(to right, ${C.goldLight}, ${C.rust})` }} />
+                <Icon size={19} style={{ color: active ? C.gold : C.navInactive, transform: active ? "scale(1.1)" : "scale(1)", transition: "all .15s" }} />
+                <span style={{ fontSize: 10, fontWeight: 500, color: active ? C.gold : C.navInactive }}>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
